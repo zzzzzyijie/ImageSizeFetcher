@@ -36,7 +36,7 @@ import AppKit
 import UIKit
 #endif
 
-internal class ImageSizeFetcherOp: Operation {
+internal class ImageSizeFetcherOp: Operation, @unchecked Sendable {
 	
 	/// Callback to call at the end of the operation
 	let callback: ImageSizeFetcher.Callback?

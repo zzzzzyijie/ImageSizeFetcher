@@ -85,7 +85,7 @@ public class ImageSizeFetcher: NSObject, URLSessionDataDelegate {
 	//MARK: - Helper Methods
 	
 	private func operation(forTask task: URLSessionTask?) -> ImageSizeFetcherOp? {
-		return (self.queue.operations as! [ImageSizeFetcherOp]).first(where: { $0.url == task?.currentRequest?.url })
+		return (self.queue.operations as? [ImageSizeFetcherOp])?.first(where: { $0.url == task?.currentRequest?.url })
 	}
 	
 	//MARK: - URLSessionDataDelegate
