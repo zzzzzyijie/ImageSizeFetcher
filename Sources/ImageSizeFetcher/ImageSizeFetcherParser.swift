@@ -71,7 +71,7 @@ public class ImageSizeFetcherParser {
 		/// - Throws: throw an exception if file is not supported.
 		internal init(fromData data: Data) throws {
 			// Evaluate the format of the image
-			let length: UInt16 = data[0..<2]
+			guard let length: UInt16 = data[0..<2] else { throw ImageParserErrors.unsupportedFormat }
 			switch CFSwapInt16(length) {
 			case 0xFFD8:	self = .jpeg
 			case 0x8950:	self = .png
@@ -125,25 +125,25 @@ public class ImageSizeFetcherParser {
 		
 		switch format {
 		case .bmp:
-			let length: UInt16 = data[14, 4]
+			guard let length: UInt16 = data[14, 4] else { return nil }
 
 			let start = 18
 			let startOffset = length == 12 ? 4 : 2
 
-			let w: UInt32 = data[start, startOffset]
-			let h: UInt32 = data[start, startOffset]
+			guard let w: UInt32 = data[start, startOffset] else { return nil }
+			guard let h: UInt32 = data[start, startOffset] else { return nil }
 			
 			return CGSize(width: Int(w), height: Int(h))
 			
 		case .png:
-			let w: UInt32 = data[16, 4]
-			let h: UInt32 = data[20, 4]
+			guard let w: UInt32 = data[16, 4] else { return nil }
+			guard let h: UInt32 = data[20, 4] else { return nil }
 			
 			return CGSize(width: Int(CFSwapInt32(w)), height: Int(CFSwapInt32(h)))
 			
 		case .gif:
-			let w: UInt16 = data[6, 2]
-			let h: UInt16 = data[8, 2]
+			guard let w: UInt16 = data[6, 2] else { return nil }
+			guard let h: UInt16 = data[8, 2] else { return nil }
 			
 			return CGSize(width: Int(w), height: Int(h))
 			
@@ -178,8 +178,8 @@ public class ImageSizeFetcherParser {
 				}
 				if data[i+1] >= 0xC0 && data[i+1] <= 0xC3 { // if marker type is SOF0, SOF1, SOF2
 					// "Start of frame" marker which contains the file size
-					let h: UInt16 = data[i + 5, 2]
-					let w: UInt16 = data[i + 7, 2]
+					guard let h: UInt16 = data[i + 5, 2] else { return nil }
+					guard let w: UInt16 = data[i + 7, 2] else { return nil }
 
 					let size = CGSize(width: Int(CFSwapInt16(w)), height: Int(CFSwapInt16(h)) );
 					return size
@@ -196,17 +196,23 @@ public class ImageSizeFetcherParser {
 }
 
 //MARK: Private Foundation Extensions
-
 private extension Data {
 
-	subscript<T>(start: Int, length: Int) -> T {
-		return self[start..<start + length]
+	/// 安全读取指定范围并转换为类型 T
+	subscript<T>(start: Int, length: Int) -> T? {
+		let end = start + length
+		guard start >= 0, length > 0, end <= self.count else { return nil }
+		return self[start..<end]
 	}
 
-	subscript<T>(range: Range<Data.Index>) -> T {
-		return subdata(in: range).withUnsafeBytes { $0.pointee }
+	/// 安全读取子范围并转换为类型 T
+	subscript<T>(range: Range<Data.Index>) -> T? {
+		guard range.lowerBound >= 0, range.upperBound <= self.count else { return nil }
+		return subdata(in: range).withUnsafeBytes { buffer in
+			guard buffer.count >= MemoryLayout<T>.size else { return nil }
+			return buffer.load(as: T.self)
+		}
 	}
-
 }
 
 private extension UInt8 {
